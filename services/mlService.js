@@ -1,34 +1,24 @@
-// const axios = require("axios");
+// const tf = require("@tensorflow/tfjs-node"); 
+// // const someMachineLearningModel = require("path/to/your/ml-model"); 
 
-// const detectPlant = async (photo) => {
+// // Fungsi untuk memproses gambar dan mendapatkan hasil deteksi
+// const processImageForDetection = async (imageBuffer) => {
 //   try {
-//     // Ganti URL ini dengan endpoint API model Machine Learning Anda
-//     const ML_API_URL = process.env.ML_API_URL || "https://example-ml-endpoint.com/predict";
+//     const tfImage = tf.node.decodeImage(imageBuffer); // Decode buffer menjadi tensor gambar
 
-//     const response = await axios.post(ML_API_URL, {
-//       image: photo, // Pastikan format image sesuai dengan kebutuhan API Anda
-//     });
+//     // Melakukan prediksi menggunakan model machine learning
+//     const model = await tf.loadLayersModel('file://path/to/your/model/model.json'); 
+//     const prediction = model.predict(tfImage.expandDims(0)); 
 
-//     // Asumsikan respons API memiliki format { result: "nama tanaman" }
-//     return response.data.result;
+//     // Konversi hasil prediksi ke bentuk yang lebih mudah dibaca
+//     const result = prediction.dataSync(); // Ambil hasil prediksi
+
+//     // Format hasil deteksi sesuai dengan yang Anda butuhkan
+//     return result;
 //   } catch (error) {
-//     console.error("Error communicating with ML service:", error.message);
-//     throw new Error("Failed to detect plant");
+//     console.error("Error processing image with ML model:", error);
+//     throw new Error("ML processing failed");
 //   }
 // };
 
-// module.exports = { detectPlant };
-
-const detectPlant = async (photo) => {
-    try {
-      console.log("Simulating ML detection...");
-      // Mensimulasikan respons
-      return "Mocked Plant Name"; 
-    } catch (error) {
-      console.error("Error during mock ML service:", error.message);
-      throw new Error("Failed to detect plant");
-    }
-  };
-  
-  module.exports = { detectPlant };
-  
+// module.exports = { processImageForDetection };

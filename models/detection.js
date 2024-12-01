@@ -1,10 +1,11 @@
 const mongoose = require("mongoose");
 
+// Schema untuk menyimpan informasi tentang deteksi tanaman
 const detectionSchema = new mongoose.Schema({
-  photo: String, // URL atau base64 string dari foto yang diunggah
-  result: String, // Hasil deteksi (nama tanaman, dsb.)
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Referensi ke user
-  detectedAt: { type: Date, default: Date.now }, // Waktu deteksi
+  plantName: { type: String, required: true },
+  result: { type: String, required: true },
+  photo: { type: String },
+  dateTime: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model("Detection", detectionSchema);

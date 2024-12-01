@@ -2,7 +2,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const authRoutes = require('./routes/auth');
-// const rootRoutes = require("./routes/root");
 const detectionRoutes = require('./routes/detection');
 const plantRoutes = require('./routes/plant');
 const profileRoutes = require('./routes/profile'); 
@@ -28,7 +27,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/detection', detectionRoutes);
 app.use('/api/plant', plantRoutes);
 app.use('/api/profile', profileRoutes);
-// app.use("/", rootRoutes);
 // Tambahkan rute lainnya di sini...
 
 const PORT = process.env.PORT || 3000;
