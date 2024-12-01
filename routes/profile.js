@@ -1,15 +1,31 @@
 const express = require("express");
-const router = express.Router();
-const { verifyToken } = require("../middlewares/auth");  // Memastikan verifyToken diimport
-const User = require("../models/user");
 const multer = require("multer");
+const crypto = require("crypto");
+const mongoose = require("mongoose");
+const Grid = require("gridfs-stream");
+const path = require("path");
+const { verifyToken } = require("../middlewares/auth");
+const User = require("../models/user");
 
-// Konfigurasi Multer untuk upload file
-const upload = multer({ dest: "uploads/" });
+const router = express.Router();
+
+// Inisialisasi GridFS
+let gfs, gridfsBucket;
+
+mongoose.connection.once("open", () => {
+  gridfsBucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
+    bucketName: "uploads",
+  });
+  gfs = Grid(mongoose.connection.db, mongoose.mongo);
+  gfs.collection("uploads");
+});
+
+// Konfigurasi Multer untuk menyimpan file di memory buffer
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 // Endpoint untuk mendapatkan profil pengguna
 router.get("/", verifyToken, async (req, res) => {
-  // Jika pengguna terautentikasi, tampilkan informasi profil
   try {
     const user = await User.findOne({ email: req.user.email }).select("-password");
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -23,102 +39,78 @@ router.get("/", verifyToken, async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("Error fetching profile:", error);
     res.status(500).json({ error: "Failed to fetch profile" });
   }
 });
 
-// Endpoint untuk meng-upload foto (terlindungi dengan token)
+// Endpoint untuk meng-upload foto ke MongoDB
 router.post("/upload", verifyToken, upload.single("photo"), async (req, res) => {
-  // Jika tidak ada pengguna terautentikasi, kembalikan error
-  if (!req.user) {
-    return res.status(401).json({ error: "Unauthorized, please log in first" });
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded" });
   }
 
-  try {
-    // Menyimpan path foto di database
-    const user = await User.findOneAndUpdate(
-      { email: req.user.email },
-      { photo: req.file.path }, // Path file foto yang diupload
-      { new: true }
-    );
+  const filename = `${crypto.randomBytes(16).toString("hex")}${path.extname(req.file.originalname)}`;
 
-    res.status(200).json({
-      message: "Photo uploaded successfully",
-      photo: user.photo,
-    });
-  } catch (error) {
+  const writeStream = gridfsBucket.openUploadStream(filename, {
+    contentType: req.file.mimetype,
+  });
+
+  // Tulis buffer dan tunggu proses selesai
+  writeStream.end(req.file.buffer, async (err) => {
+    if (err) {
+      console.error("Error writing to GridFSBucket:", err);
+      return res.status(500).json({ error: "Failed to upload photo" });
+    }
+
+    // Setelah selesai, dapatkan detail file
+    try {
+      const files = await gfs.files.findOne({ filename: filename });
+      if (!files) {
+        console.error("File saved but not found in database");
+        return res.status(500).json({ error: "File upload incomplete" });
+      }
+
+      // Update profil pengguna dengan nama file
+      const user = await User.findOneAndUpdate(
+        { email: req.user.email },
+        { photo: filename },
+        { new: true }
+      );
+
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      res.status(200).json({
+        message: "Photo uploaded successfully",
+        photo: filename,
+      });
+    } catch (error) {
+      console.error("Error fetching or updating user photo:", error);
+      res.status(500).json({ error: "Failed to update user photo" });
+    }
+  });
+
+  writeStream.on("error", (err) => {
+    console.error("Error uploading photo:", err);
     res.status(500).json({ error: "Failed to upload photo" });
+  });
+});
+
+
+
+// Endpoint untuk mengambil foto berdasarkan filename
+router.get("/photo/:filename", async (req, res) => {
+  try {
+    const file = await gfs.files.findOne({ filename: req.params.filename });
+    if (!file) return res.status(404).json({ error: "File not found" });
+
+    const readStream = gridfsBucket.openDownloadStreamByName(file.filename);
+    res.set("Content-Type", file.contentType);
+    readStream.pipe(res);
+  } catch (error) {
+    console.error("Error fetching photo:", error);
+    res.status(500).json({ error: "Failed to fetch photo" });
   }
 });
 
-// Logout Endpoint
-router.post("/logout", verifyToken, (req, res) => {
-    // The token is removed on the client-side, so the server doesn't need to do anything except acknowledge the request.
-    res.status(200).json({
-      message: "Successfully logged out. Please remove your token from storage.",
-    });
-  });
-
 module.exports = router;
-
-
-// const express = require('express');
-// const multer = require('multer');
-// const { GridFsStorage } = require('multer-gridfs-storage');
-// const mongoose = require('mongoose');
-// const User = require('../models/user');
-// const jwt = require('jsonwebtoken');
-// const router = express.Router();
-
-// // Konfigurasi storage GridFS
-// const storage = new GridFsStorage({
-//   url: process.env.MONGO_URI,  // Gantilah dengan URI MongoDB Anda
-//   file: (req, file) => {
-//     return {
-//       bucketName: "photos",  // Menyimpan file dalam bucket 'photos'
-//       filename: Date.now() + file.originalname, // Membuat nama file unik
-//     };
-//   }
-// });
-
-// const upload = multer({ storage });
-
-// // Middleware untuk verifikasi token JWT
-// const verifyToken = (req, res, next) => {
-//   const token = req.headers["authorization"];
-//   if (!token) {
-//     return res.status(401).json({ error: "Unauthorized" });
-//   }
-
-//   // Menghapus kata "Bearer" dari token
-//   const tokenWithoutBearer = token.split(" ")[1];
-
-//   jwt.verify(tokenWithoutBearer, process.env.JWT_SECRET, (err, decoded) => {
-//     if (err) {
-//       return res.status(401).json({ error: "Unauthorized" });
-//     }
-//     req.user = decoded;  // Menyimpan informasi pengguna dari token
-//     next();
-//   });
-// };
-
-// // Route untuk upload foto profil
-// router.post('/upload', verifyToken, upload.single('photo'), async (req, res) => {
-//   try {
-//     if (!req.file) {
-//       return res.status(400).json({ error: "No file uploaded" });
-//     }
-
-//     // Menyimpan referensi ID file yang di-upload di model User
-//     const user = await User.findById(req.user._id);
-//     user.photo = req.file.id;  // Menyimpan ID foto dalam User
-//     await user.save();
-
-//     res.status(200).json({ message: "Profile photo uploaded successfully", photoId: req.file.id });
-//   } catch (error) {
-//     console.error("Error uploading file:", error);
-//     res.status(500).json({ error: "Internal server error" });
-//   }
-// });
-
-// module.exports = router;

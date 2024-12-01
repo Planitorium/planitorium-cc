@@ -12,4 +12,3 @@ const generateResponse = (statusCode, message, data = null) => {
   };
   
   module.exports = { generateResponse, errorHandler };
-  
