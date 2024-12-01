@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/user');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const Blacklist = require('../models/blacklist');  // Mengimpor model Blacklist
 
 // Register endpoint
 router.post('/register', async (req, res) => {
@@ -37,6 +38,43 @@ router.post('/login', async (req, res) => {
     res.status(200).json({ token });
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Logout endpoint
+router.post('/logout', async (req, res) => {
+  try {
+    const authHeader = req.headers['cookie'];
+    if (!authHeader) {
+      return res.status(200).json({ message: 'No active session found.' }); // Tidak ada sesi yang aktif
+    }
+
+    // Mengambil token dari cookie
+    const cookie = authHeader.split('=')[1];
+    const accessToken = cookie.split(';')[0];
+
+    // Memeriksa apakah token ada di blacklist
+    const checkIfBlacklisted = await Blacklist.findOne({ token: accessToken });
+    if (checkIfBlacklisted) {
+      return res.status(200).json({ message: 'Token already blacklisted, you are logged out.' }); // Token sudah diblacklist
+    }
+
+    // Jika token belum diblacklist, tambahkan ke blacklist
+    const newBlacklist = new Blacklist({
+      token: accessToken,
+    });
+    await newBlacklist.save();
+
+    // Menghapus cookie di sisi client dengan header Clear-Site-Data
+    res.setHeader('Clear-Site-Data', '"cookies"');
+
+    // Mengirimkan respon logout berhasil
+    res.status(200).json({ message: 'You are logged out!' });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Internal Server Error',
+    });
   }
 });
 

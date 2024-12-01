@@ -8,5 +8,3 @@ const userSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model("User", userSchema);
-
-// photo: { type: mongoose.Schema.Types.ObjectId, ref: 'fs.files' } 
