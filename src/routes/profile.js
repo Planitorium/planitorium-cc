@@ -10,8 +10,8 @@ const router = express.Router();
 
 // Inisialisasi Firestore dan Storage
 const db = new Firestore({
-  projectId: 'planitorium',
-  databaseId: 'planitorium-db',
+  projectId: "planitorium",
+  databaseId: "planitorium-db",
 });
 const usersCollection = db.collection("users");
 const storage = new Storage();
@@ -26,8 +26,10 @@ const upload = multer({ storage: multerStorage });
 router.get("/", verifyToken, async (req, res) => {
   try {
     // Menggunakan query untuk mencari pengguna berdasarkan email
-    const userDoc = await usersCollection.where('email', '==', req.user.email).get();
-    
+    const userDoc = await usersCollection
+      .where("email", "==", req.user.email)
+      .get();
+
     // Cek jika dokumen tidak ditemukan
     if (userDoc.empty) {
       return res.status(404).json({ error: "User not found" });
@@ -51,65 +53,70 @@ router.get("/", verifyToken, async (req, res) => {
   }
 });
 
-
 // Endpoint untuk meng-upload foto ke Cloud Storage
-router.post("/upload", verifyToken, upload.single("photo"), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
-  }
+router.post(
+  "/upload",
+  verifyToken,
+  upload.single("photo"),
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
 
-  // Pastikan req.user.email valid
-  console.log("User email from token:", req.user.email);
+    // Pastikan req.user.email valid
+    console.log("User email from token:", req.user.email);
 
-  try {
-    // Membuat nama file unik menggunakan crypto
-    const filename = `${crypto.randomBytes(16).toString("hex")}${path.extname(req.file.originalname)}`;
-    const blob = bucket.file(filename);
-    const blobStream = blob.createWriteStream({
-      metadata: { contentType: req.file.mimetype },
-    });
+    try {
+      // Membuat nama file unik menggunakan crypto
+      const filename = `${crypto.randomBytes(16).toString("hex")}${path.extname(req.file.originalname)}`;
+      const blob = bucket.file(filename);
+      const blobStream = blob.createWriteStream({
+        metadata: { contentType: req.file.mimetype },
+      });
 
-    // Menangani error saat meng-upload ke Cloud Storage
-    blobStream.on("error", (err) => {
-      console.error("Error uploading file to Cloud Storage:", err);
-      res.status(500).json({ error: "Failed to upload photo" });
-    });
+      // Menangani error saat meng-upload ke Cloud Storage
+      blobStream.on("error", (err) => {
+        console.error("Error uploading file to Cloud Storage:", err);
+        res.status(500).json({ error: "Failed to upload photo" });
+      });
 
-    // Setelah upload selesai, perbarui data foto di Firestore
-    blobStream.on("finish", async () => {
-      const photoUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+      // Setelah upload selesai, perbarui data foto di Firestore
+      blobStream.on("finish", async () => {
+        const photoUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
 
-      try {
-        // Mengambil dokumen pengguna berdasarkan email
-        const userDoc = await usersCollection.where("email", "==", req.user.email).get();
-        if (userDoc.empty) {
-          return res.status(404).json({ error: "User not found" });
+        try {
+          // Mengambil dokumen pengguna berdasarkan email
+          const userDoc = await usersCollection
+            .where("email", "==", req.user.email)
+            .get();
+          if (userDoc.empty) {
+            return res.status(404).json({ error: "User not found" });
+          }
+
+          // Ambil data pengguna dari dokumen pertama yang ditemukan
+          const user = userDoc.docs[0].data();
+
+          // Update URL foto di Firestore
+          await userDoc.docs[0].ref.update({ photo: photoUrl });
+
+          res.status(200).json({
+            message: "Photo uploaded successfully",
+            photo: photoUrl,
+          });
+        } catch (error) {
+          console.error("Error updating user photo:", error);
+          res.status(500).json({ error: "Failed to update user photo" });
         }
+      });
 
-        // Ambil data pengguna dari dokumen pertama yang ditemukan
-        const user = userDoc.docs[0].data();
-
-        // Update URL foto di Firestore
-        await userDoc.docs[0].ref.update({ photo: photoUrl });
-
-        res.status(200).json({
-          message: "Photo uploaded successfully",
-          photo: photoUrl,
-        });
-      } catch (error) {
-        console.error("Error updating user photo:", error);
-        res.status(500).json({ error: "Failed to update user photo" });
-      }
-    });
-
-    // Mulai proses upload
-    blobStream.end(req.file.buffer);
-  } catch (error) {
-    console.error("Error uploading photo:", error);
-    res.status(500).json({ error: "Failed to upload photo" });
-  }
-});
-
+      // Mulai proses upload
+      blobStream.end(req.file.buffer);
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      res.status(500).json({ error: "Failed to upload photo" });
+    }
+  },
+);
 
 // Endpoint untuk mengambil foto berdasarkan URL (opsional jika URL langsung digunakan)
 router.get("/photo/:filename", async (req, res) => {

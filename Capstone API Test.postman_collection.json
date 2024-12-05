@@ -1,0 +1,504 @@
+{
+	"info": {
+		"_postman_id": "c84e4b13-ade6-4a09-bb7f-570937a2c647",
+		"name": "Capstone API Test",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "37860855"
+	},
+	"item": [
+		{
+			"name": "auth",
+			"item": [
+				{
+					"name": "register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"afifhamzah12@gmail.com\",\r\n    \"password\": \"anjaymabar12\",\r\n    \"username\": \"afifhamzah17\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:3000/api/auth/register",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"afifhamzah12@gmail.com\",\r\n    \"password\": \"anjaymabar12\",\r\n    \"username\": \"afifhamzah17\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:3000/api/auth/login",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"afifhamzah12@gmail.com\",\r\n    \"password\": \"anjaymabar12\",\r\n    \"username\": \"afifhamzah17\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:3000/api/auth/logout",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "profile",
+			"item": [
+				{
+					"name": "...",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFmaWZoYW16YWgxMkBnbWFpbC5jb20iLCJpYXQiOjE3MzM0MTU1ODYsImV4cCI6MTczMzQxOTE4Nn0.qUzmQe8oCieDf9FoSs_NwLVRL5_JfuPBy9cFe5f0T9E",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:3000/api/profile",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "photo/filename",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFmaWZoYW16YWgxMkBnbWFpbC5jb20iLCJpYXQiOjE3MzM0MTU1ODYsImV4cCI6MTczMzQxOTE4Nn0.qUzmQe8oCieDf9FoSs_NwLVRL5_JfuPBy9cFe5f0T9E",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "photo",
+									"type": "file",
+									"src": "/C:/Users/U410p/Pictures/00002.jpg"
+								}
+							]
+						},
+						"url": {
+							"raw": "localhost:3000/api/profile/photo/11b6b65fb5c014a263097b740de3f644.jpg",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"profile",
+								"photo",
+								"11b6b65fb5c014a263097b740de3f644.jpg"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "upload",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFmaWZoYW16YWgxMkBnbWFpbC5jb20iLCJpYXQiOjE3MzM0MTU1ODYsImV4cCI6MTczMzQxOTE4Nn0.qUzmQe8oCieDf9FoSs_NwLVRL5_JfuPBy9cFe5f0T9E",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "photo",
+									"type": "file",
+									"src": "/C:/Users/U410p/Pictures/00002.jpg"
+								}
+							]
+						},
+						"url": {
+							"raw": "localhost:3000/api/profile/upload",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"profile",
+								"upload"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "plant",
+			"item": [
+				{
+					"name": "add",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFmaWZoYW16YWgxMkBnbWFpbC5jb20iLCJpYXQiOjE3MzM0MTU1ODYsImV4cCI6MTczMzQxOTE4Nn0.qUzmQe8oCieDf9FoSs_NwLVRL5_JfuPBy9cFe5f0T9E",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "photo",
+									"type": "file",
+									"src": "/C:/Users/U410p/Pictures/logo_Universitas-Negeri-Medan.webp"
+								},
+								{
+									"key": "name",
+									"value": "bukan-tanaman",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "ini deskripsi",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "localhost:3000/api/plant/add",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"plant",
+								"add"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "detail/id",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFmaWZoYW16YWgxMkBnbWFpbC5jb20iLCJpYXQiOjE3MzM0MTU1ODYsImV4cCI6MTczMzQxOTE4Nn0.qUzmQe8oCieDf9FoSs_NwLVRL5_JfuPBy9cFe5f0T9E",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "photo",
+									"type": "file",
+									"src": "/C:/Users/U410p/Pictures/00002.jpg"
+								}
+							]
+						},
+						"url": {
+							"raw": "localhost:3000/api/plant/detail/35071e339311cca3",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"plant",
+								"detail",
+								"35071e339311cca3"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "list",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFmaWZoYW16YWgxMkBnbWFpbC5jb20iLCJpYXQiOjE3MzM0MTU1ODYsImV4cCI6MTczMzQxOTE4Nn0.qUzmQe8oCieDf9FoSs_NwLVRL5_JfuPBy9cFe5f0T9E",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "photo",
+									"type": "file",
+									"src": "/C:/Users/U410p/Pictures/00002.jpg"
+								}
+							]
+						},
+						"url": {
+							"raw": "localhost:3000/api/plant/list",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"plant",
+								"list"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "detection",
+			"item": [
+				{
+					"name": "add",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFmaWZoYW16YWgxMkBnbWFpbC5jb20iLCJpYXQiOjE3MzM0MTU1ODYsImV4cCI6MTczMzQxOTE4Nn0.qUzmQe8oCieDf9FoSs_NwLVRL5_JfuPBy9cFe5f0T9E",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "photo",
+									"type": "file",
+									"src": "/C:/Users/U410p/Pictures/logo_Universitas-Negeri-Medan.webp"
+								},
+								{
+									"key": "name",
+									"value": "bukan-tanaman",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "ini deskripsi",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "localhost:3000/api/plant/add",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"plant",
+								"add"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "list",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFmaWZoYW16YWgxMkBnbWFpbC5jb20iLCJpYXQiOjE3MzM0MTU1ODYsImV4cCI6MTczMzQxOTE4Nn0.qUzmQe8oCieDf9FoSs_NwLVRL5_JfuPBy9cFe5f0T9E",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "photo",
+									"type": "file",
+									"src": "/C:/Users/U410p/Pictures/00002.jpg"
+								}
+							]
+						},
+						"url": {
+							"raw": "localhost:3000/api/detection/list",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"detection",
+								"list"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "photo/filename",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFmaWZoYW16YWgxMkBnbWFpbC5jb20iLCJpYXQiOjE3MzM0MTU1ODYsImV4cCI6MTczMzQxOTE4Nn0.qUzmQe8oCieDf9FoSs_NwLVRL5_JfuPBy9cFe5f0T9E",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "photo",
+									"type": "file",
+									"src": "/C:/Users/U410p/Pictures/00002.jpg"
+								}
+							]
+						},
+						"url": {
+							"raw": "localhost:3000/api/detection/photo/namafile.jpg",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"detection",
+								"photo",
+								"namafile.jpg"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

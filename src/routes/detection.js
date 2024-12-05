@@ -3,9 +3,9 @@ const multer = require("multer");
 const crypto = require("crypto");
 const path = require("path");
 const { verifyToken } = require("../middlewares/auth");
-const { predictClassification } = require("../services/mlService");  // Pastikan Anda memiliki service ML
-const storeData = require("../services/storeData");  // Fungsi untuk menyimpan data ke Firestore
-const { Firestore } = require('@google-cloud/firestore');  // Firestore SDK
+const { predictClassification } = require("../services/mlService"); // Pastikan Anda memiliki service ML
+const storeData = require("../services/storeData"); // Fungsi untuk menyimpan data ke Firestore
+const { Firestore } = require("@google-cloud/firestore"); // Firestore SDK
 const loadModel = require("../services/loadModel");
 
 const router = express.Router();
@@ -16,11 +16,11 @@ const upload = multer({ storage });
 
 // Inisialisasi Firestore
 const db = new Firestore({
-  projectId: 'planitorium',
-  databaseId: 'planitorium-db'
+  projectId: "planitorium",
+  databaseId: "planitorium-db",
 });
 
-const predictionsCollection = db.collection('predictions');
+const predictionsCollection = db.collection("predictions");
 
 // Endpoint untuk menambah deteksi tanaman
 
@@ -39,9 +39,11 @@ router.post("/add", verifyToken, upload.single("photo"), async (req, res) => {
       const model = await loadModel();
 
       // Proses gambar dengan model ML untuk mendapatkan hasil prediksi
-      const result = await predictClassification(model, photoBuffer);  // Fungsi prediksi sekarang menerima model sebagai argumen
+      const result = await predictClassification(model, photoBuffer); // Fungsi prediksi sekarang menerima model sebagai argumen
       if (!result) {
-        return res.status(400).json({ error: "Failed to process image with ML service" });
+        return res
+          .status(400)
+          .json({ error: "Failed to process image with ML service" });
       }
 
       // Simpan hasil prediksi ke Firestore
@@ -75,25 +77,25 @@ router.post("/add", verifyToken, upload.single("photo"), async (req, res) => {
   }
 });
 
-
-
 // Endpoint untuk melihat semua deteksi tanaman
 router.get("/list", async (req, res) => {
   try {
     const detectionsSnapshot = await predictionsCollection.get();
-    const detections = detectionsSnapshot.docs.map(doc => ({
+    const detections = detectionsSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }));
 
     res.status(200).json({
-      detections: detections.map(detection => ({
+      detections: detections.map((detection) => ({
         plantName: detection.plantName,
         result: detection.result,
         suggestion: detection.suggestion,
         confidence: detection.confidence,
         createdAt: detection.createdAt,
-        photo: detection.photo ? `${req.protocol}://${req.get("host")}/detection/photo/${detection.photo}` : null,
+        photo: detection.photo
+          ? `${req.protocol}://${req.get("host")}/detection/photo/${detection.photo}`
+          : null,
       })),
     });
   } catch (error) {
@@ -106,17 +108,20 @@ router.get("/list", async (req, res) => {
 router.get("/photo/:filename", async (req, res) => {
   try {
     // Ambil file berdasarkan nama dari Firestore
-    const fileDoc = await predictionsCollection.where('photo', '==', req.params.filename).limit(1).get();
+    const fileDoc = await predictionsCollection
+      .where("photo", "==", req.params.filename)
+      .limit(1)
+      .get();
 
     if (fileDoc.empty) {
       return res.status(404).json({ error: "File not found" });
     }
 
     const file = fileDoc.docs[0].data();
-    const photoBuffer = file.photo;  // Data foto sebagai buffer
+    const photoBuffer = file.photo; // Data foto sebagai buffer
 
     res.set("Content-Type", "image/jpeg"); // Sesuaikan tipe konten jika diperlukan
-    res.send(photoBuffer);  // Kirim buffer sebagai respons
+    res.send(photoBuffer); // Kirim buffer sebagai respons
   } catch (error) {
     console.error("Error fetching photo:", error);
     res.status(500).json({ error: "Failed to fetch photo" });

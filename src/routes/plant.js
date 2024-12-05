@@ -9,8 +9,8 @@ const router = express.Router();
 
 // Inisialisasi Firestore
 const db = new Firestore({
-  projectId: 'planitorium',
-  databaseId: 'planitorium-db',
+  projectId: "planitorium",
+  databaseId: "planitorium-db",
 });
 const plantsCollection = db.collection("plants");
 
@@ -72,7 +72,9 @@ router.get("/detail/:id", async (req, res) => {
     res.status(200).json({
       plant: {
         ...plant,
-        photo: plant.photo ? `${req.protocol}://${req.get("host")}/plant/photo/${plant.photo}` : null,
+        photo: plant.photo
+          ? `${req.protocol}://${req.get("host")}/plant/photo/${plant.photo}`
+          : null,
       },
     });
   } catch (error) {
@@ -89,7 +91,9 @@ router.get("/list", async (req, res) => {
       const plant = doc.data();
       return {
         ...plant,
-        photo: plant.photo ? `${req.protocol}://${req.get("host")}/plant/photo/${plant.photo}` : null,
+        photo: plant.photo
+          ? `${req.protocol}://${req.get("host")}/plant/photo/${plant.photo}`
+          : null,
       };
     });
 
@@ -105,7 +109,9 @@ router.get("/photo/:filename", async (req, res) => {
   const { filename } = req.params;
 
   // Jika Anda menggunakan Firestore Storage untuk menyimpan file, tambahkan logika pengunduhan file di sini
-  res.status(404).json({ error: "File not found (implement storage logic here)" });
+  res
+    .status(404)
+    .json({ error: "File not found (implement storage logic here)" });
 });
 
 module.exports = router;
