@@ -21,8 +21,7 @@ const bucket = storage.bucket("planitorium-images");
 const multerStorage = multer.memoryStorage();
 const upload = multer({ storage: multerStorage });
 
-// Endpoint untuk mendapatkan profil pengguna
-// Endpoint untuk mendapatkan profil pengguna
+// Endpoint untuk mendapatkan profil pengguna beserta foto dalam bentuk URL
 router.get("/", verifyToken, async (req, res) => {
   try {
     // Menggunakan query untuk mencari pengguna berdasarkan email
@@ -32,24 +31,119 @@ router.get("/", verifyToken, async (req, res) => {
 
     // Cek jika dokumen tidak ditemukan
     if (userDoc.empty) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({
+        error: true,
+        message: "User not found",
+      });
     }
 
     // Ambil data dari dokumen pertama yang ditemukan
-    const user = userDoc.docs[0].data(); // Akses data dari dokumen pertama
+    const user = userDoc.docs[0].data();
 
-    // Kirim response dengan data profil pengguna
-    res.status(200).json({
-      message: "Welcome to your profile!",
-      profile: {
-        username: user.username,
-        email: user.email,
-        photo: user.photo || "No photo uploaded yet",
-      },
-    });
+    // Jika foto ada, ambil URL foto dari Cloud Storage
+    if (user.photo) {
+      const fileName = user.photo.split("/").pop(); // Ambil nama file dari URL foto
+      const file = bucket.file(fileName);
+      const [exists] = await file.exists();
+
+      if (exists) {
+        // Generate URL foto langsung
+        const photoUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+
+        // Kirim profil dengan foto dalam bentuk URL
+        res.status(200).json({
+          error: false,
+          message: "Profile retrieved successfully",
+          profile: {
+            username: user.username,
+            email: user.email,
+            photo: photoUrl, // Kirim URL foto
+          },
+        });
+      } else {
+        res.status(404).json({
+          error: true,
+          message: "Photo not found",
+        });
+      }
+    } else {
+      // Jika tidak ada foto
+      res.status(200).json({
+        error: false,
+        message: "Profile retrieved successfully",
+        profile: {
+          username: user.username,
+          email: user.email,
+          photo: null,
+        },
+      });
+    }
   } catch (error) {
     console.error("Error fetching profile:", error);
-    res.status(500).json({ error: "Failed to fetch profile" });
+    res.status(500).json({
+      error: true,
+      message: "Failed to fetch profile",
+    });
+  }
+});
+
+// Endpoint untuk mendapatkan foto pengguna sebagai gambar
+router.get("/photo", verifyToken, async (req, res) => {
+  try {
+    // Menggunakan query untuk mencari pengguna berdasarkan email
+    const userDoc = await usersCollection
+      .where("email", "==", req.user.email)
+      .get();
+
+    // Cek jika dokumen tidak ditemukan
+    if (userDoc.empty) {
+      return res.status(404).json({
+        error: true,
+        message: "User not found",
+      });
+    }
+
+    // Ambil data pengguna
+    const user = userDoc.docs[0].data();
+
+    // Jika foto ada, ambil foto dari Cloud Storage
+    if (user.photo) {
+      const file = bucket.file(user.photo.split("/").pop()); // Ambil nama file dari URL foto
+      const [exists] = await file.exists();
+
+      if (exists) {
+        // Kirim foto sebagai stream
+        const readStream = file.createReadStream();
+
+        readStream.on("error", (err) => {
+          console.error("Error fetching photo:", err);
+          return res.status(500).json({
+            error: true,
+            message: "Failed to fetch photo",
+          });
+        });
+
+        // Set Content-Type foto dan kirim gambar
+        res.set("Content-Type", file.metadata.contentType);
+        readStream.pipe(res);
+      } else {
+        res.status(404).json({
+          error: true,
+          message: "Photo not found",
+        });
+      }
+    } else {
+      res.status(404).json({
+        error: true,
+        message: "No photo available",
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching photo:", error);
+    res.status(500).json({
+      error: true,
+      message: "Failed to fetch photo",
+    });
   }
 });
 
@@ -60,11 +154,11 @@ router.post(
   upload.single("photo"),
   async (req, res) => {
     if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
+      return res.status(400).json({
+        error: true,
+        message: "No file uploaded",
+      });
     }
-
-    // Pastikan req.user.email valid
-    console.log("User email from token:", req.user.email);
 
     try {
       // Membuat nama file unik menggunakan crypto
@@ -77,7 +171,10 @@ router.post(
       // Menangani error saat meng-upload ke Cloud Storage
       blobStream.on("error", (err) => {
         console.error("Error uploading file to Cloud Storage:", err);
-        res.status(500).json({ error: "Failed to upload photo" });
+        res.status(500).json({
+          error: true,
+          message: "Failed to upload photo",
+        });
       });
 
       // Setelah upload selesai, perbarui data foto di Firestore
@@ -90,22 +187,26 @@ router.post(
             .where("email", "==", req.user.email)
             .get();
           if (userDoc.empty) {
-            return res.status(404).json({ error: "User not found" });
+            return res.status(404).json({
+              error: true,
+              message: "User not found",
+            });
           }
-
-          // Ambil data pengguna dari dokumen pertama yang ditemukan
-          const user = userDoc.docs[0].data();
 
           // Update URL foto di Firestore
           await userDoc.docs[0].ref.update({ photo: photoUrl });
 
           res.status(200).json({
+            error: false,
             message: "Photo uploaded successfully",
             photo: photoUrl,
           });
         } catch (error) {
           console.error("Error updating user photo:", error);
-          res.status(500).json({ error: "Failed to update user photo" });
+          res.status(500).json({
+            error: true,
+            message: "Failed to update user photo",
+          });
         }
       });
 
@@ -113,30 +214,12 @@ router.post(
       blobStream.end(req.file.buffer);
     } catch (error) {
       console.error("Error uploading photo:", error);
-      res.status(500).json({ error: "Failed to upload photo" });
+      res.status(500).json({
+        error: true,
+        message: "Failed to upload photo",
+      });
     }
   },
 );
-
-// Endpoint untuk mengambil foto berdasarkan URL (opsional jika URL langsung digunakan)
-router.get("/photo/:filename", async (req, res) => {
-  try {
-    const file = bucket.file(req.params.filename);
-    const [exists] = await file.exists();
-    if (!exists) return res.status(404).json({ error: "File not found" });
-
-    const readStream = file.createReadStream();
-    readStream.on("error", (err) => {
-      console.error("Error reading file:", err);
-      res.status(500).json({ error: "Failed to fetch photo" });
-    });
-
-    res.set("Content-Type", file.metadata.contentType);
-    readStream.pipe(res);
-  } catch (error) {
-    console.error("Error fetching photo:", error);
-    res.status(500).json({ error: "Failed to fetch photo" });
-  }
-});
 
 module.exports = router;

@@ -10,95 +10,131 @@ const db = new Firestore({
   databaseId: "planitorium-db",
 });
 
+// Validator untuk email (format email valid menggunakan regex)
+const isValidEmail = (email) => {
+  const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return emailRegex.test(email);
+};
+
+// Validator untuk password (minimal 8 karakter, mengandung huruf besar, huruf kecil, dan angka)
+const isValidPassword = (password) => {
+  const passwordRegex = /^(?=(.*[a-zA-Z]))(?=(.*[\d\W]))[a-zA-Z\d\W]{8,}$/;
+  return passwordRegex.test(password);
+};
+
 // Register endpoint
 router.post("/register", async (req, res) => {
   try {
+    const { email, password, username } = req.body;
+
+    // Validasi email
+    if (!isValidEmail(email)) {
+      return res.status(400).json({
+        error: true,
+        message: "Email invalid",
+      });
+    }
+
+    // Validasi password
+    if (!isValidPassword(password)) {
+      return res.status(400).json({
+        error: true,
+        message:
+          "Password must be at least 8 characters, with at least one uppercase letter and one number or special characters",
+      });
+    }
+
     const usersCollection = db.collection("users");
-    const snapshot = await usersCollection
-      .where("email", "==", req.body.email)
-      .get();
+    const snapshot = await usersCollection.where("email", "==", email).get();
 
-    if (!snapshot.empty)
-      return res.status(400).json({ error: "Email already exists" });
+    if (!snapshot.empty) {
+      return res.status(400).json({
+        error: true,
+        message: "Email already exists",
+      });
+    }
 
-    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = {
-      username: req.body.username,
-      email: req.body.email,
+      username: username,
+      email: email,
       password: hashedPassword,
     };
 
     await usersCollection.add(newUser);
-    res.status(201).json({ message: "User registered successfully" });
+    res.status(201).json({
+      error: false,
+      message: "User registered successfully",
+    });
   } catch (error) {
     console.error("Error registering user:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({
+      error: true,
+      message: "Internal server error",
+    });
   }
 });
 
 // Login endpoint
 router.post("/login", async (req, res) => {
   try {
-    const usersCollection = db.collection("users");
-    const snapshot = await usersCollection
-      .where("email", "==", req.body.email)
-      .get();
+    const { email, password } = req.body;
 
-    if (snapshot.empty)
-      return res.status(401).json({ error: "Invalid credentials" });
+    // Cari user berdasarkan email
+    const usersCollection = db.collection("users");
+    const snapshot = await usersCollection.where("email", "==", email).get();
+
+    if (snapshot.empty) {
+      return res.status(401).json({
+        error: true,
+        message: "Invalid credentials",
+      });
+    }
 
     const userDoc = snapshot.docs[0];
     const user = userDoc.data();
 
-    const passwordMatch = await bcrypt.compare(
-      req.body.password,
-      user.password,
-    );
-    if (!passwordMatch)
-      return res.status(401).json({ error: "Invalid credentials" });
+    // Cek apakah password cocok
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      return res.status(401).json({
+        error: true,
+        message: "Invalid credentials",
+      });
+    }
 
-    // Ensure JWT_SECRET is available
+    // Pastikan JWT_SECRET tersedia
     if (!process.env.JWT_SECRET) {
       console.error("JWT_SECRET environment variable is missing");
-      return res.status(500).json({ error: "Internal server error" });
+      return res.status(500).json({
+        error: true,
+        message: "Internal server error",
+      });
     }
 
-    const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
+    // Buat JWT token
+    const token = jwt.sign(
+      { email: user.email, userId: userDoc.id },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1h",
+      },
+    );
+
+    res.status(200).json({
+      error: false,
+      message: "success",
+      result: {
+        userId: userDoc.id, // ID pengguna di Firestore
+        username: user.username, // Nama pengguna
+        token: token, // JWT token untuk autentikasi
+      },
     });
-    res.status(200).json({ token });
   } catch (error) {
     console.error("Error logging in user:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// Logout endpoint
-router.post("/logout", async (req, res) => {
-  try {
-    const authHeader = req.headers["authorization"];
-    if (!authHeader)
-      return res.status(200).json({ message: "No active session found." });
-
-    const token = authHeader.split(" ")[1];
-    const blacklistCollection = db.collection("blacklist");
-
-    const snapshot = await blacklistCollection
-      .where("token", "==", token)
-      .get();
-    if (!snapshot.empty) {
-      return res
-        .status(200)
-        .json({ message: "Token already blacklisted, you are logged out." });
-    }
-
-    await blacklistCollection.add({ token });
-    res.status(200).json({ message: "You are logged out!" });
-  } catch (error) {
-    console.error("Error logging out user:", error);
     res.status(500).json({
-      status: "error",
-      message: "Internal Server Error",
+      error: true,
+      message: "Internal server error",
     });
   }
 });

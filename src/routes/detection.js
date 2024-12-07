@@ -4,26 +4,28 @@ const crypto = require("crypto");
 const path = require("path");
 const { verifyToken } = require("../middlewares/auth");
 const { predictClassification } = require("../services/mlService"); // Pastikan Anda memiliki service ML
-const storeData = require("../services/storeData"); // Fungsi untuk menyimpan data ke Firestore
+const { Storage } = require("@google-cloud/storage");
 const { Firestore } = require("@google-cloud/firestore"); // Firestore SDK
 const loadModel = require("../services/loadModel");
 
 const router = express.Router();
-
-// Konfigurasi Multer untuk menyimpan file di memory buffer
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
 
 // Inisialisasi Firestore
 const db = new Firestore({
   projectId: "planitorium",
   databaseId: "planitorium-db",
 });
-
 const predictionsCollection = db.collection("predictions");
 
-// Endpoint untuk menambah deteksi tanaman
+// Inisialisasi Google Cloud Storage
+const storage = new Storage();
+const bucket = storage.bucket("planitorium-images");
 
+// Konfigurasi Multer untuk menyimpan file di memory buffer
+const multerStorage = multer.memoryStorage();
+const upload = multer({ storage: multerStorage });
+
+// Endpoint untuk menambah deteksi tanaman
 router.post("/add", verifyToken, upload.single("photo"), async (req, res) => {
   const { plantName } = req.body;
 
@@ -31,9 +33,29 @@ router.post("/add", verifyToken, upload.single("photo"), async (req, res) => {
     return res.status(400).json({ error: "Plant name is required" });
   }
 
+  if (!req.file) {
+    return res.status(400).json({ error: "No photo uploaded" });
+  }
+
   try {
-    if (req.file) {
-      const photoBuffer = req.file.buffer;
+    const photoBuffer = req.file.buffer;
+    const photoFilename = `${crypto.randomBytes(16).toString("hex")}${path.extname(req.file.originalname)}`;
+    const blob = bucket.file(photoFilename);
+    const blobStream = blob.createWriteStream({
+      metadata: { contentType: req.file.mimetype },
+    });
+
+    // Menangani error saat meng-upload ke Cloud Storage
+    blobStream.on("error", (err) => {
+      console.error("Error uploading file to Cloud Storage:", err);
+      return res
+        .status(500)
+        .json({ error: "Failed to upload photo to Cloud Storage" });
+    });
+
+    // Setelah upload selesai, kita dapat mengambil URL foto
+    blobStream.on("finish", async () => {
+      const photoUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
 
       // Memuat model TensorFlow
       const model = await loadModel();
@@ -46,12 +68,14 @@ router.post("/add", verifyToken, upload.single("photo"), async (req, res) => {
           .json({ error: "Failed to process image with ML service" });
       }
 
-      // Simpan hasil prediksi ke Firestore
+      // Simpan hasil prediksi ke Firestore dengan URL foto yang baru
       const newDetection = {
         plantName,
         result: result.label,
         confidence: result.confidence,
         suggestion: result.suggestion,
+        photo: photoFilename, // Simpan nama file foto di Firestore
+        photoUrl: photoUrl, // Simpan URL foto di Firestore
         createdAt: new Date().toISOString(),
       };
 
@@ -65,12 +89,14 @@ router.post("/add", verifyToken, upload.single("photo"), async (req, res) => {
           result: result.label,
           suggestion: result.suggestion,
           confidence: result.confidence,
+          photoUrl: photoUrl, // Kembalikan URL foto
           createdAt: new Date().toISOString(),
         },
       });
-    } else {
-      return res.status(400).json({ error: "No photo uploaded" });
-    }
+    });
+
+    // Mulai proses upload ke Cloud Storage
+    blobStream.end(req.file.buffer);
   } catch (error) {
     console.error("Error adding detection:", error);
     res.status(500).json({ error: "Failed to add detection" });
@@ -93,9 +119,7 @@ router.get("/list", async (req, res) => {
         suggestion: detection.suggestion,
         confidence: detection.confidence,
         createdAt: detection.createdAt,
-        photo: detection.photo
-          ? `${req.protocol}://${req.get("host")}/detection/photo/${detection.photo}`
-          : null,
+        photoUrl: detection.photoUrl, // Kembalikan URL foto untuk setiap deteksi
       })),
     });
   } catch (error) {
@@ -104,24 +128,21 @@ router.get("/list", async (req, res) => {
   }
 });
 
-// Endpoint untuk mengambil foto berdasarkan filename
+// Endpoint untuk mengambil foto berdasarkan filename (opsional)
 router.get("/photo/:filename", async (req, res) => {
   try {
-    // Ambil file berdasarkan nama dari Firestore
-    const fileDoc = await predictionsCollection
-      .where("photo", "==", req.params.filename)
-      .limit(1)
-      .get();
+    const file = bucket.file(req.params.filename);
+    const [exists] = await file.exists();
+    if (!exists) return res.status(404).json({ error: "File not found" });
 
-    if (fileDoc.empty) {
-      return res.status(404).json({ error: "File not found" });
-    }
+    const readStream = file.createReadStream();
+    readStream.on("error", (err) => {
+      console.error("Error reading file:", err);
+      res.status(500).json({ error: "Failed to fetch photo" });
+    });
 
-    const file = fileDoc.docs[0].data();
-    const photoBuffer = file.photo; // Data foto sebagai buffer
-
-    res.set("Content-Type", "image/jpeg"); // Sesuaikan tipe konten jika diperlukan
-    res.send(photoBuffer); // Kirim buffer sebagai respons
+    res.set("Content-Type", file.metadata.contentType);
+    readStream.pipe(res);
   } catch (error) {
     console.error("Error fetching photo:", error);
     res.status(500).json({ error: "Failed to fetch photo" });

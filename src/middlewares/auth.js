@@ -9,7 +9,10 @@ const verifyJWT = (token, callback) => {
 const verifyToken = (req, res, next) => {
   const token = req.headers["authorization"];
   if (!token) {
-    return res.status(401).json({ error: "Unauthorized, no token provided" });
+    return res.status(401).json({
+      error: true,
+      message: "Unauthorized, no token provided",
+    });
   }
 
   // Hapus prefix 'Bearer' dari token
@@ -18,7 +21,10 @@ const verifyToken = (req, res, next) => {
   // Verifikasi token
   verifyJWT(tokenWithoutBearer, (err, decoded) => {
     if (err) {
-      return res.status(401).json({ error: "Unauthorized, invalid token" });
+      return res.status(401).json({
+        error: true,
+        message: "Unauthorized, invalid token",
+      });
     }
     req.user = decoded; // Simpan informasi pengguna ke request object
     next(); // Lanjutkan ke route handler berikutnya
@@ -37,7 +43,10 @@ const optionalVerifyToken = (req, res, next) => {
   // Verifikasi token
   verifyJWT(tokenWithoutBearer, (err, decoded) => {
     if (err) {
-      return res.status(401).json({ error: "Unauthorized, invalid token" });
+      return res.status(401).json({
+        error: true,
+        message: "Unauthorized, invalid token",
+      });
     }
     req.user = decoded; // Simpan informasi pengguna ke request object
     next(); // Lanjutkan ke route handler berikutnya
