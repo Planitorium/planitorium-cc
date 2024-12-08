@@ -56,6 +56,12 @@ router.post("/add", verifyToken, upload.single("photo"), async (req, res) => {
     // Mengubah startTime dan endTime ke format string YYYY-MM-DD
     const formattedStartTime = new Date(startTime).toISOString().split("T")[0];
     const formattedEndTime = new Date(endTime).toISOString().split("T")[0];
+    const formattedCreatedAt = new Date(currentTime)
+      .toISOString()
+      .split("T")[0];
+    const formattedUpdatedAt = new Date(currentTime)
+      .toISOString()
+      .split("T")[0];
 
     // Validasi format tanggal
     if (
@@ -65,6 +71,14 @@ router.post("/add", verifyToken, upload.single("photo"), async (req, res) => {
       return res.status(400).json({
         error: true,
         message: "Invalid 'startTime' or 'endTime' format",
+      });
+    }
+
+    // Validasi agar endTime tidak lebih kecil dari startTime
+    if (new Date(endTime) < new Date(startTime)) {
+      return res.status(400).json({
+        error: true,
+        message: "'endTime' cannot be earlier than 'startTime'",
       });
     }
 
@@ -93,8 +107,8 @@ router.post("/add", verifyToken, upload.single("photo"), async (req, res) => {
       startTime: formattedStartTime, // Simpan sebagai string
       endTime: formattedEndTime, // Simpan sebagai string
       photo: photoFilename,
-      createdAt: currentTime,
-      updatedAt: currentTime,
+      createdAt: formattedCreatedAt,
+      updatedAt: formattedUpdatedAt,
     };
 
     await plantsCollection.doc(plantId).set(plantData);
@@ -131,7 +145,7 @@ router.get("/detail/:id", async (req, res) => {
       plant: {
         ...plant,
         photo: plant.photo
-          ? `${req.protocol}://${req.get("host")}/plant/photo/${plant.photo}`
+          ? `${req.protocol}://${req.get("host")}/api/plant/photo/${plant.photo}`
           : null,
       },
     });
@@ -155,7 +169,7 @@ router.get("/list", async (req, res) => {
       return {
         ...plant,
         photo: plant.photo
-          ? `${req.protocol}://${req.get("host")}/plant/photo/${plant.photo}`
+          ? `${req.protocol}://${req.get("host")}/api/plant/photo/${plant.photo}`
           : null,
       };
     });
@@ -227,7 +241,7 @@ router.get("/list/filter", async (req, res) => {
   try {
     // Ambil data tanaman yang endTime-nya lebih kecil atau sama dengan parsedEndTime
     const snapshot = await plantsCollection
-      .where("endTime", "<=", endTime) // Filter berdasarkan endTime string
+      .where("endTime", "=", endTime) // Filter berdasarkan endTime string
       .get();
 
     // Jika tidak ada data tanaman yang cocok
@@ -244,7 +258,7 @@ router.get("/list/filter", async (req, res) => {
       return {
         ...plant,
         photo: plant.photo
-          ? `${req.protocol}://${req.get("host")}/plant/photo/${plant.photo}`
+          ? `${req.protocol}://${req.get("host")}/api/plant/photo/${plant.photo}`
           : null,
       };
     });
