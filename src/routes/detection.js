@@ -100,7 +100,7 @@ router.post("/add", verifyToken, upload.single("photo"), async (req, res) => {
             );
         }
 
-        // Simpan hasil prediksi ke Firestore
+        // Simpan hasil prediksi ke Firestore dengan menambahkan field 'id'
         const newDetection = {
           plantName,
           result: result.label,
@@ -111,11 +111,16 @@ router.post("/add", verifyToken, upload.single("photo"), async (req, res) => {
           createdAt: new Date().toISOString(),
         };
 
+        // Menambahkan dokumen ke Firestore dan mendapatkan ID yang dihasilkan oleh Firestore
         const docRef = await predictionsCollection.add(newDetection);
 
+        // Setelah dokumen ditambahkan, update dokumen dengan field 'id'
+        await docRef.update({ id: docRef.id });
+
+        // Kembalikan data termasuk 'id' Firestore yang telah disimpan dalam field
         res.status(201).json(
           createApiResponse(false, "Detection added successfully", {
-            id: docRef.id,
+            id: docRef.id, // ID Firestore yang dihasilkan
             plantName,
             result: result.label,
             suggestion: result.suggestion,
@@ -143,7 +148,10 @@ router.post("/add", verifyToken, upload.single("photo"), async (req, res) => {
 // Endpoint untuk melihat semua deteksi tanaman
 router.get("/list", async (req, res) => {
   try {
-    const detectionsSnapshot = await predictionsCollection.get();
+    const detectionsSnapshot = await predictionsCollection
+      .orderBy("createdAt", "desc")
+      .get();
+
     const detections = detectionsSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
@@ -152,9 +160,9 @@ router.get("/list", async (req, res) => {
     res.status(200).json(
       createApiResponse(false, "List of detections fetched successfully", {
         detections: detections.map((detection) => ({
+          id: detection.id,
           plantName: detection.plantName,
           result: detection.result,
-          suggestion: detection.suggestion,
           confidence: detection.confidence,
           createdAt: detection.createdAt,
           photoUrl: detection.photoUrl, // Include photo URL
@@ -164,6 +172,43 @@ router.get("/list", async (req, res) => {
   } catch (error) {
     console.error("Error fetching detections:", error);
     res.status(500).json(createApiResponse(true, "Failed to fetch detections"));
+  }
+});
+
+// Endpoint untuk melihat detail deteksi berdasarkan ID
+router.get("/detail/:id", async (req, res) => {
+  try {
+    const detectionId = req.params.id;  // ID yang diterima dari parameter URL
+    console.log("Looking for detection with ID:", detectionId);  // Log ID yang diterima
+
+    const doc = await predictionsCollection.doc(detectionId).get();
+
+    // Log untuk memastikan apakah dokumen ditemukan
+    if (!doc.exists) {
+      console.log(`No detection found with ID: ${detectionId}`);
+      return res.status(404).json({
+        error: true,
+        message: "detection not found",
+      });
+    }
+
+    const detection = doc.data();
+    res.status(200).json({
+      error: false,
+      detection: {
+        id: doc.id, // Kembalikan ID dari dokumen Firestore
+        ...detection,
+        photo: detection.photo
+          ? `${req.protocol}://${req.get("host")}/api/detection/photo/${detection.photo}`
+          : null,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching detection detail:", error);
+    res.status(500).json({
+      error: true,
+      message: "Failed to fetch detection detail",
+    });
   }
 });
 
@@ -204,6 +249,7 @@ router.get("/list/filter", async (req, res) => {
         `List of detections filtered by result: ${result}`,
         {
           detections: detections.map((detection) => ({
+            id: detection.id, // Include ID for each detection
             plantName: detection.plantName,
             result: detection.result,
             suggestion: detection.suggestion,

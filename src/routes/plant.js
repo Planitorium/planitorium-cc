@@ -158,10 +158,13 @@ router.get("/detail/:id", async (req, res) => {
   }
 });
 
-// Endpoint untuk melihat semua tanaman
+// Endpoint untuk melihat semua tanaman, diurutkan berdasarkan created_at terbaru
 router.get("/list", async (req, res) => {
   try {
-    const snapshot = await plantsCollection.get();
+    const snapshot = await plantsCollection
+      .orderBy("createdAt", "desc") // Menambahkan urutan berdasarkan created_at secara menurun
+      .get();
+
     const plants = snapshot.docs.map((doc) => {
       const plant = doc.data();
 
