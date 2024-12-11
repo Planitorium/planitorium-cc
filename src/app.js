@@ -39,7 +39,7 @@ async function loadModelAsync() {
 async function startServer() {
   // Attempt to load model asynchronously in the background
   const model = await loadModelAsync();
-
+  
   // Routes
   app.use("/api/auth", authRoutes);
   app.use("/api/detection", detectionRoutes);

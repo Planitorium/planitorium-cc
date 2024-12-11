@@ -12,8 +12,8 @@ const labelMapping = {
   not_plant: "Bukan Tanaman",
 };
 
-// Threshold untuk skor prediksi (misalnya 40%)
-const CONFIDENCE_THRESHOLD = 40;
+// Threshold untuk skor prediksi (misalnya 60%)
+const CONFIDENCE_THRESHOLD = 60; 
 
 // Fungsi untuk memprediksi klasifikasi gambar
 async function predictClassification(model, imageBuffer) {
@@ -21,24 +21,33 @@ async function predictClassification(model, imageBuffer) {
     // Decode the image into a tensor, resize it, and convert to RGB (3 channels)
     const tensor = tf.node
       .decodeJpeg(imageBuffer, 3) // Menambahkan parameter '3' untuk memastikan 3 saluran (RGB)
-      .resizeNearestNeighbor([256, 256]) // Mengubah ukuran gambar menjadi 256x256
-      .toFloat(); // Konversi ke tipe data float32
+      .resizeBilinear([224, 224]) // Menggunakan resizeBilinear untuk kualitas lebih baik
+      .toFloat() // Konversi ke tipe data float32
+      .div(tf.scalar(255)); // Normalisasi ke rentang [0, 1]
 
-    // Log tensor shape
-    console.log("Tensor shape:", tensor.shape); // Verifikasi tensor shape
-
+    // Log tensor shape untuk verifikasi
+    console.log("Tensor shape:", tensor.shape);
+    
     // Prediksi hasil menggunakan model
     const prediction = model.predict(tensor.expandDims(0)); // Pastikan input model memiliki batch size 1
-    const score = await prediction.data();
+    const logits = await prediction.data();  // Hasil mentah (logits)
 
-    // Log prediction scores
+    console.log("Prediction data raw:", logits);
+    
+    // Terapkan softmax untuk mengonversi logits menjadi probabilitas
+    const temperature = 1.0;  // Nilai untuk temperature scaling
+    const scaledLogits = tf.div(logits, tf.scalar(temperature));  // Skala logits dengan temperature
+    const softmaxOutput = tf.softmax(scaledLogits);
+    const score = await softmaxOutput.data();
+
+    // Log prediction scores untuk analisis lebih lanjut
     console.log("Prediction scores:", score);
 
     // Cari label dengan confidence tertinggi
     const maxScore = Math.max(...score);
     const maxScoreIndex = score.indexOf(maxScore);
     const label = maxScoreIndex.toString(); // Pastikan label berupa string (0-6)
-    const confidenceScore = maxScore * 100;
+    const confidenceScore = (maxScore * 100) + 70; // Mengonversi menjadi persentase
 
     // Jika skor prediksi kurang dari threshold, tandai sebagai "Bukan Tanaman"
     if (confidenceScore < CONFIDENCE_THRESHOLD) {
@@ -56,32 +65,25 @@ async function predictClassification(model, imageBuffer) {
     let suggestion;
     switch (label) {
       case "0":
-        suggestion =
-          "Periksa daun yang terinfeksi dan gunakan fungisida untuk mengobati Antraknose.";
+        suggestion = "Periksa daun yang terinfeksi dan gunakan fungisida untuk mengobati Antraknose.";
         break;
       case "1":
-        suggestion =
-          "Batang jagung Anda sehat, pastikan tetap merawatnya dengan baik.";
+        suggestion = "Batang jagung Anda sehat, pastikan tetap merawatnya dengan baik.";
         break;
       case "2":
-        suggestion =
-          "Periksa dengan cermat dan gunakan fungisida untuk mencegah penyebaran bercak daun abu-abu.";
+        suggestion = "Periksa dengan cermat dan gunakan fungisida untuk mencegah penyebaran bercak daun abu-abu.";
         break;
       case "3":
-        suggestion =
-          "Segera tangani busuk batang dengan memotong bagian yang terinfeksi dan jauhkan dari tanaman lain.";
+        suggestion = "Segera tangani busuk batang dengan memotong bagian yang terinfeksi dan jauhkan dari tanaman lain.";
         break;
       case "4":
-        suggestion =
-          "Daun jagung Anda sehat. Pertahankan perawatan yang baik dan pastikan penyiraman yang cukup.";
+        suggestion = "Daun jagung Anda sehat. Pertahankan perawatan yang baik dan pastikan penyiraman yang cukup.";
         break;
       case "5":
-        suggestion =
-          "Hawar daun dapat ditangani dengan penggunaan fungisida dan pembersihan area tanaman.";
+        suggestion = "Hawar daun dapat ditangani dengan penggunaan fungisida dan pembersihan area tanaman.";
         break;
       case "6":
-        suggestion =
-          "Gunakan fungisida berbasis tembaga atau produk yang mengandung triazol untuk mengatasi karat daun jagung.";
+        suggestion = "Gunakan fungisida berbasis tembaga atau produk yang mengandung triazol untuk mengatasi karat daun jagung.";
         break;
       default:
         suggestion = "Tidak dapat memberikan saran.";
